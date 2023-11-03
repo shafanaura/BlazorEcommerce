@@ -1,3 +1,97 @@
 ﻿@page "/"
+@page "/{categoryUrl}"
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@implements IDisposable
 
-<ProducList />
+@if (ProductService.Products == null || ProductService.Products.Count == 0)
+{
+    <p class="text-center">Loading...</p>
+}
+else
+{
+    <div class="border-b border-gray-200 pb-10">
+        <h1 class="text-4xl font-bold tracking-tight text-gray-900">New Releases</h1>
+        <p class="mt-4 text-base text-gray-500">Discover the Latest Books for Your Reading Pleasure, with Enhanced Content and Features!</p>
+    </div>
+
+    <div class="pb-24 grid grid-cols-5 gap-12">
+        <aside class="sticky top-0 h-max pt-12 ">
+            <button type="button" class="inline-flex items-center lg:hidden">
+                <span class="text-sm font-medium text-gray-700">Filters</span>
+                <svg class="ml-1 h-5 w-5 flex-shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                </svg>
+            </button>
+
+            <div class="hidden lg:block">
+                <form class="space-y-10 divide-y divide-gray-200">
+                    <fieldset>
+                        <legend class="block text-sm font-medium text-gray-900">Category</legend>
+                        <div class="flex flex-col gap-3 pt-6">
+                            <a href="/" class="w-full">
+                                <button class="rounded w-full border border-indigo-300 text-sm p-1.5 text-indigo-600 hover:bg-indigo-100 @(CategoryUrl == null ? "bg-indigo-100" : "bg-white")">
+                                    All
+                                </button>
+                            </a>
+                            @foreach (var category in CategoryService.Categories)
+                            {
+                                <a href="@category.Url" class="w-full">
+                                    <button class="rounded w-full border border-indigo-300 text-sm p-1.5 text-indigo-600 hover:bg-indigo-100 @(CategoryUrl == category.Url ? "bg-indigo-100" : "bg-white")">
+                                        @category.Name
+                                    </button>
+                                </a>
+                            }
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </aside>
+
+        <section aria-labelledby="product-heading" class="mt-6 lg:col-span-4 lg:mt-0 xl:col-span-3 pt-12 ">
+            <h2 id="product-heading" class="sr-only">Products</h2>
+            <ul class="grid grid-cols-5 gap-x-6 gap-y-12">
+                @foreach (var product in ProductService.Products)
+                {
+                    <li>
+                        <a href="/product/@product.Id" class="hover:underline">
+                            <img src=@product.ImageUrl class="h-56 object-contain pb-2" />
+                            <p class="font-semibold">@product.Title</p>
+                        </a>
+                        <a href="/author/@product.Author" class="hover:underline">
+                            <p class="pb-1 text-gray-600">@product.Author</p>
+                        </a>
+                        <p class="text-lg font-medium text-indigo-600">$@product.Price</p>
+                    </li>
+                }
+            </ul>
+        </section>
+    </div>
+
+}
+
+@code {
+    private static List<Product> Products = new List<Product>();
+    private static List<Category> Categories = new List<Category>();
+    [Parameter] public string? CategoryUrl { get; set; } = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CategoryService.GetCategories();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ProductService.GetProducts(CategoryUrl);
+    }
+
+    protected override void OnInitialized()
+    {
+        ProductService.ProductsChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ProductService.ProductsChanged -= StateHasChanged;
+    }
+}
